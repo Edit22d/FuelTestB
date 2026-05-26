@@ -1,0 +1,35 @@
+meta {
+  name: 01 Register (Customer)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/api/v1/auth/register/
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "full_name": "John Doe",
+    "email": "john@example.com",
+    "phone_number": "+256740000001",
+    "password": "Test@1234",
+    "confirm_password": "Test@1234",
+    "user_type": "customer",
+    "location": "Kampala",
+    "referral_code": ""
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.tokens) {
+    bru.setEnvVar("access_token", res.body.tokens.access);
+    bru.setEnvVar("refresh_token", res.body.tokens.refresh);
+  }
+}
