@@ -1,0 +1,11 @@
+{# Modal content for HTMX-driven modals #}
+<div class="modal" id="createStationModal">
+  <div class="modal-content">
+    <h3>Add New Station</h3>
+    <form hx-post="{% url 'dashboard:stations' %}" hx-target="#root" hx-swap="none">
+      {% csrf_token %}
+      <!-- Form fields here -->
+      <button type="submit">Create</button>
+    </form>
+  </div>
+</div>

@@ -1,0 +1,6 @@
+{# HTMX sidebar partial - can be swapped dynamically if needed #}
+{# React handles sidebar, so this is a fallback/progressive enhancement #}
+<aside id="sidebar" hx-trigger="load" hx-get="{% url 'dashboard:sidebar_partial' %}" hx-swap="innerHTML">
+  <!-- Fallback content -->
+  <div class="loading">Loading navigation...</div>
+</aside>

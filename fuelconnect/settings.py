@@ -20,6 +20,8 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     'authentication',
+    'dashboard', 
+    
 ]
 
 MIDDLEWARE = [
@@ -31,6 +33,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+     'dashboard.middleware.JWTMiddleware',
 ]
 
 ROOT_URLCONF = 'fuelconnect.urls'
@@ -103,3 +106,8 @@ DEFAULT_FROM_EMAIL = 'noreply@fuelconnect.com'
 
 # ─── OTP Settings ──────────────────────────────────────────────────────────────
 OTP_EXPIRY_MINUTES = 10
+
+# ─── AUTH SETTINGS ─────────────────────────────────────────────────────────────
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'
+LOGOUT_REDIRECT_URL = '/login/'

@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; overflow: hidden; }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.sc::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); }
+
+@keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .6; transform: scale(.85); } }
+@keyframes slide-down { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes logo-glow { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.18); } }
+@keyframes badge-in { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.nav-item { transition: background .14s ease, color .14s ease; }
+.nav-item:hover { cursor: pointer; }
+.sub-list { animation: slide-down .18s ease both; }
+.logo-icon { animation: logo-glow 3.5s ease infinite; }
+.stat-card { transition: border-color .18s, transform .15s; }
+.stat-card:hover { transform: translateY(-1px); }
+.badge { animation: badge-in .25s ease both; }
+.sidebar-transition { transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1); }
+.chevron-rot { transition: transform .22s ease; }
+.collapse-btn { transition: background .14s, box-shadow .14s; }
+.collapse-btn:hover { box-shadow: 0 0 0 3px rgba(245,158,11,.2); }
+
+/* HTMX utility classes */
+.htmx-indicator { opacity: 0; transition: opacity 200ms ease-in; }
+.htmx-request .htmx-indicator { opacity: 1; }
+.htmx-request.htmx-indicator { opacity: 1; }
