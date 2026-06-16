@@ -1,0 +1,40 @@
+meta {
+  name: Login
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:8000/api/auth/login/
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone_number": "+256700300000",
+    "password": "Test@1234"
+  }
+}
+
+tests {
+  test("Status code is 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("Response has success true", function() {
+    expect(res.body.success).to.equal(true);
+  });
+  
+  test("Response contains user data", function() {
+    expect(res.body.data.user).to.not.be.null;
+  });
+  
+  test("Access token is present", function() {
+    expect(res.body.data.access_token).to.not.be.empty;
+  });
+}

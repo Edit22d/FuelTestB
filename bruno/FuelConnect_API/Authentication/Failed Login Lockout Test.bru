@@ -1,0 +1,32 @@
+meta {
+  name: Failed Login Lockout Test
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://localhost:8000/api/auth/login/
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone_number": "+256700300000",
+    "password": "WrongPassword123!"
+  }
+}
+
+tests {
+  test("First attempt - Should return remaining attempts", function() {
+    expect(res.status).to.equal(401);
+    expect(res.body.remaining_attempts).to.equal(2);
+  });
+}
+
+# Run this 3 times to test lockout
+# After 3 failures, should return lockout message

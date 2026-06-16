@@ -142,3 +142,31 @@ so the **Me** and **Refresh Token** requests work out of the box.
 - Expires in 10 minutes (configurable via `OTP_EXPIRY_MINUTES` in settings)
 - Previous OTPs are invalidated when a new one is requested
 - In production: OTP is emailed. In dev (DEBUG=True): returned in response as `debug_token`
+
+
+fuel_connect_backend/
+├── manage.py
+├── requirements.txt
+├── backend/
+│   ├── __init__.py
+│   ├── settings.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── asgi.py
+├── api/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── serializers.py
+│   ├── views.py
+│   ├── urls.py
+│   ├── authentication.py
+│   └── utils.py
+└── bruno/
+    └── Fuel Connect API/
+        ├── bruno.json
+        └── Authentication/
+            ├── Register.bru
+            ├── Login.bru
+            └── Failed Login Lockout Test.bru

@@ -1,6 +1,9 @@
 {
   "version": "1",
-  "name": "FuelConnectAPI",
+  "name": "Fuel Connect API",
   "type": "collection",
-  "ignore": []
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
 }

@@ -1,0 +1,49 @@
+meta {
+  name: Register
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://localhost:8000/api/auth/register/
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "phone_number": "+256700300000",
+    "email": "jane.doe@example.com",
+    "full_name": "Jane Doe",
+    "password": "Test@1234",
+    "confirm_password": "Test@1234",
+    "user_type": "customer",
+    "location": "Kampala, Uganda",
+    "referral_code": "",
+    "vehicle_type": "",
+    "vehicle_number": "",
+    "license_number": ""
+  }
+}
+
+tests {
+  test("Status code is 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  
+  test("Response has success true", function() {
+    expect(res.body.success).to.equal(true);
+  });
+  
+  test("Response contains access token", function() {
+    expect(res.body.data.access_token).to.not.be.empty;
+  });
+  
+  test("User data is returned", function() {
+    expect(res.body.data.user.phone_number).to.equal("+256700300000");
+  });
+}
