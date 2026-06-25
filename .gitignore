@@ -119,3 +119,5 @@ yarn-error.log
 # ── Compiled frontend assets ──────────────────────────────────────────────────
 /frontend/build/
 /frontend/dist/
+
+tmp/
