@@ -1,5 +1,7 @@
+# api/views.py
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import api_view, permission_classes 
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -8,17 +10,25 @@ from datetime import timedelta
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
-from django.utils.html import format_html
+from django.db import models
 import uuid
 import requests
-import json
 import random
 import traceback
 
 from .serializers import (
-    RegisterSerializer, LoginSerializer, UserSerializer
+    RegisterSerializer, LoginSerializer, UserSerializer,
+    StationSerializer, StationDetailSerializer, FuelPriceSerializer,
+    OrderSerializer, NotificationSerializer, DashboardDataSerializer,
+    VehicleSerializer, VehicleDetailSerializer, VehicleCostSerializer,
+    VehicleIssueSerializer, PaymentSerializer
 )
-from .models import User, LoginHistory
+from .models import (
+    User, LoginHistory, PasswordResetToken, Station, FuelPrice,
+    Order, Notification, Vehicle, VehicleCost, VehicleIssue,
+    VehicleMeterHistory, DeliveryAgent, Payment, SecurityLog,
+    DashboardStats, FuelType
+)
 
 # =========================================================
 # HELPER FUNCTIONS
@@ -33,7 +43,7 @@ def get_client_ip(request):
     return ip
 
 def send_reset_email(user_email, reset_token):
-    """Send password reset email with OTP - Modern HTML Version"""
+    """Send password reset email with OTP"""
     subject = '🔐 Password Reset Request - Fuel Connect'
     
     html_message = f'''
@@ -59,7 +69,7 @@ def send_reset_email(user_email, reset_token):
                 overflow: hidden;
             }}
             .header {{
-                background: linear-gradient(135deg, #f5a623, #f7c948);
+                background: linear-gradient(135deg, #C4963D, #D4A84D);
                 padding: 30px 40px;
                 text-align: center;
             }}
@@ -68,43 +78,17 @@ def send_reset_email(user_email, reset_token):
                 font-size: 24px;
                 font-weight: 700;
                 margin: 0;
-                letter-spacing: 0.5px;
-            }}
-            .header p {{
-                color: rgba(255,255,255,0.9);
-                font-size: 14px;
-                margin: 8px 0 0;
             }}
             .content {{
                 padding: 40px;
             }}
-            .content h2 {{
-                color: #1a2a3a;
-                font-size: 20px;
-                font-weight: 600;
-                margin: 0 0 12px;
-            }}
-            .content p {{
-                color: #4a5568;
-                font-size: 15px;
-                line-height: 1.6;
-                margin: 0 0 16px;
-            }}
             .token-box {{
-                background: linear-gradient(135deg, #f7fafc, #edf2f7);
-                border: 2px dashed #f5a623;
+                background: #f7fafc;
+                border: 2px dashed #C4963D;
                 border-radius: 16px;
                 padding: 24px;
                 text-align: center;
                 margin: 24px 0;
-                position: relative;
-            }}
-            .token-box .label {{
-                color: #718096;
-                font-size: 12px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                font-weight: 600;
             }}
             .token-box .token {{
                 font-family: 'Courier New', monospace;
@@ -112,36 +96,10 @@ def send_reset_email(user_email, reset_token):
                 font-weight: 700;
                 color: #1a2a3a;
                 letter-spacing: 4px;
-                padding: 12px 0;
                 display: block;
                 background: #ffffff;
                 border-radius: 8px;
-                margin-top: 8px;
-            }}
-            .token-box .copy-hint {{
-                color: #a0aec0;
-                font-size: 12px;
-                margin-top: 8px;
-            }}
-            .info-row {{
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                background: #f7fafc;
-                padding: 12px 16px;
-                border-radius: 10px;
-                margin: 16px 0;
-            }}
-            .info-row .icon {{
-                font-size: 18px;
-            }}
-            .info-row .text {{
-                color: #4a5568;
-                font-size: 13px;
-            }}
-            .divider {{
-                border-top: 1px solid #e2e8f0;
-                margin: 24px 0;
+                padding: 12px 0;
             }}
             .footer {{
                 background: #f7fafc;
@@ -152,41 +110,6 @@ def send_reset_email(user_email, reset_token):
                 color: #a0aec0;
                 font-size: 12px;
                 margin: 0;
-                line-height: 1.6;
-            }}
-            .footer a {{
-                color: #f5a623;
-                text-decoration: none;
-            }}
-            .badge {{
-                display: inline-block;
-                background: #48bb78;
-                color: #ffffff;
-                font-size: 11px;
-                font-weight: 600;
-                padding: 4px 12px;
-                border-radius: 20px;
-                margin-top: 4px;
-            }}
-            .expiry {{
-                color: #e53e3e;
-                font-weight: 500;
-                font-size: 13px;
-            }}
-            @media (max-width: 480px) {{
-                .container {{
-                    margin: 20px 16px;
-                }}
-                .header {{
-                    padding: 20px;
-                }}
-                .content {{
-                    padding: 24px;
-                }}
-                .token-box .token {{
-                    font-size: 24px;
-                    letter-spacing: 2px;
-                }}
             }}
         </style>
     </head>
@@ -199,45 +122,17 @@ def send_reset_email(user_email, reset_token):
             <div class="content">
                 <h2>🔐 Reset Your Password</h2>
                 <p>Hello,</p>
-                <p>We received a request to reset the password for your Fuel Connect account. Use the verification code below to continue.</p>
+                <p>We received a request to reset the password for your Fuel Connect account.</p>
                 <div class="token-box">
                     <div class="label">🔑 Verification Code</div>
                     <span class="token">{reset_token}</span>
-                    <div class="copy-hint">📋 Tap or click the code to copy it</div>
                 </div>
-                <div class="info-row">
-                    <span class="icon">⏱️</span>
-                    <span class="text">This code will expire in <strong>5 minutes</strong></span>
-                </div>
-                <div class="info-row">
-                    <span class="icon">🛡️</span>
-                    <span class="text">For your security, never share this code with anyone</span>
-                </div>
-                <div class="divider"></div>
-                <p style="font-size: 14px; color: #718096;">
-                    <strong>📌 How to use this code:</strong>
-                </p>
-                <ol style="color: #4a5568; font-size: 14px; line-height: 1.8; padding-left: 20px;">
-                    <li>Open the Fuel Connect app</li>
-                    <li>Enter the verification code shown above</li>
-                    <li>Create your new password</li>
-                </ol>
-                <div style="background: #fefcbf; border-left: 4px solid #f5a623; padding: 12px 16px; border-radius: 8px; margin-top: 16px;">
-                    <p style="color: #744210; font-size: 13px; margin: 0;">
-                        <strong>⚠️ Important:</strong> If you didn't request this, please ignore this email. Your account remains secure.
-                    </p>
-                </div>
+                <p>This code will expire in <strong>5 minutes</strong>.</p>
+                <p>If you didn't request this, please ignore this email.</p>
             </div>
             <div class="footer">
-                <p>
-                    <strong>Fuel Connect</strong> — Smart Fuel Tracking
-                </p>
-                <p style="margin-top: 8px;">
-                    This is an automated message, please do not reply.
-                </p>
-                <p style="margin-top: 8px;">
-                    &copy; 2026 Fuel Connect. All rights reserved.
-                </p>
+                <p><strong>Fuel Connect</strong> — Smart Fuel Tracking</p>
+                <p>&copy; 2026 Fuel Connect. All rights reserved.</p>
             </div>
         </div>
     </body>
@@ -276,7 +171,7 @@ Fuel Connect Team
         return False
 
 # =========================================================
-# VIEWS
+# AUTHENTICATION VIEWS
 # =========================================================
 
 class RegisterView(APIView):
@@ -346,7 +241,7 @@ class LoginView(APIView):
             if needs_captcha and not captcha_token:
                 return Response({
                     'success': False,
-                    'message': 'Security verification required. Please solve the math problem.',
+                    'message': 'Security verification required.',
                     'requires_captcha': True,
                     'error': 'captcha_required'
                 }, status=status.HTTP_400_BAD_REQUEST)
@@ -355,7 +250,7 @@ class LoginView(APIView):
                 if not captcha_token.startswith('math_captcha_'):
                     return Response({
                         'success': False,
-                        'message': 'Invalid verification. Please try again.',
+                        'message': 'Invalid verification.',
                         'error': 'captcha_failed',
                         'requires_captcha': True
                     }, status=status.HTTP_400_BAD_REQUEST)
@@ -402,17 +297,6 @@ class LoginView(APIView):
             except User.DoesNotExist:
                 pass
         
-        error_data = serializer.errors.get('non_field_errors', [{}])[0] if serializer.errors.get('non_field_errors') else {}
-        
-        try:
-            User.objects.get(phone_number=phone_number)
-        except User.DoesNotExist:
-            return Response({
-                'success': False,
-                'message': 'No account found with this phone number. Please sign up first.',
-                'error': 'account_not_found'
-            }, status=status.HTTP_401_UNAUTHORIZED)
-        
         try:
             user = User.objects.get(phone_number=phone_number)
             if user.is_locked():
@@ -420,21 +304,12 @@ class LoginView(APIView):
                 minutes = remaining // 60
                 return Response({
                     'success': False,
-                    'message': f'Account locked. Too many failed attempts. Please try again in {minutes} minutes.',
+                    'message': f'Account locked. Try again in {minutes} minutes.',
                     'error': 'account_locked',
                     'lockout_seconds': remaining
                 }, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
             pass
-        
-        if isinstance(error_data, dict):
-            return Response({
-                'success': False,
-                'message': error_data.get('message', 'Invalid credentials'),
-                'error': error_data.get('error', 'invalid_credentials'),
-                'remaining_attempts': error_data.get('remaining_attempts'),
-                'lockout_seconds': error_data.get('lockout_seconds')
-            }, status=status.HTTP_401_UNAUTHORIZED)
         
         return Response({
             'success': False,
@@ -442,23 +317,15 @@ class LoginView(APIView):
             'error': 'invalid_credentials'
         }, status=status.HTTP_401_UNAUTHORIZED)
 
-# =========================================================
-# UPDATED SocialLoginView - Accepts both id_token and access_token
-# =========================================================
-
 class SocialLoginView(APIView):
     permission_classes = [AllowAny]
     
     def post(self, request):
         provider = request.data.get('provider')
         access_token = request.data.get('access_token')
-        id_token = request.data.get('id_token')  # Also accept id_token
+        id_token = request.data.get('id_token')
         
-        # Use id_token if available, otherwise use access_token
         token = id_token or access_token
-        
-        print(f"📡 Provider: {provider}")
-        print(f"📡 Token: {token[:50] if token else 'None'}...")
         
         if not provider or not token:
             return Response({
@@ -470,29 +337,23 @@ class SocialLoginView(APIView):
             user = None
             
             if provider == 'google':
-                # Try both token types
                 google_data = None
-                token_used = None
                 
-                # Try with id_token first
                 if id_token:
                     try:
                         google_url = f"https://www.googleapis.com/oauth2/v3/tokeninfo?id_token={id_token}"
                         response = requests.get(google_url, timeout=10)
                         if response.status_code == 200:
                             google_data = response.json()
-                            token_used = 'id_token'
                     except Exception as e:
                         print(f"id_token verification failed: {e}")
                 
-                # If id_token failed, try with access_token
                 if not google_data and access_token:
                     try:
                         google_url = f"https://www.googleapis.com/oauth2/v3/tokeninfo?access_token={access_token}"
                         response = requests.get(google_url, timeout=10)
                         if response.status_code == 200:
                             google_data = response.json()
-                            token_used = 'access_token'
                     except Exception as e:
                         print(f"access_token verification failed: {e}")
                 
@@ -513,10 +374,7 @@ class SocialLoginView(APIView):
                     if created:
                         user.last_activity = timezone.now()
                         user.save()
-                    
-                    print(f"✅ Google login successful using {token_used}")
                 else:
-                    print(f"❌ Google token invalid - response: {google_data}")
                     return Response({
                         'success': False,
                         'message': 'Invalid Google token'
@@ -637,7 +495,7 @@ class ResetPasswordView(APIView):
         if len(token) != 6 or not token.isdigit():
             return Response({
                 'success': False,
-                'message': 'Invalid or expired token. Please use the 6-digit code sent to your email.'
+                'message': 'Invalid or expired token.'
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
@@ -735,16 +593,322 @@ class LogoutView(APIView):
                 'message': 'Logout failed'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-# Add these imports at the top
-from .models import Station, FuelPrice, Order, Notification
-from .serializers import (
-    RegisterSerializer, LoginSerializer, UserSerializer, 
-    StationSerializer, StationDetailSerializer, FuelPriceSerializer,
-    OrderSerializer, NotificationSerializer, DashboardDataSerializer
-)
+# =========================================================
+# USER MANAGEMENT VIEWS
+# =========================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_list(request):
+    """List all users (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to view all users'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    users = User.objects.all().order_by('-date_joined')
+    
+    user_type = request.GET.get('user_type')
+    if user_type:
+        users = users.filter(user_type=user_type)
+    
+    is_verified = request.GET.get('is_verified')
+    if is_verified is not None:
+        if is_verified.lower() == 'true':
+            users = users.filter(is_verified=True)
+        elif is_verified.lower() == 'false':
+            users = users.filter(is_verified=False)
+    
+    is_active = request.GET.get('is_active')
+    if is_active is not None:
+        if is_active.lower() == 'true':
+            users = users.filter(is_active=True)
+        elif is_active.lower() == 'false':
+            users = users.filter(is_active=False)
+    
+    search = request.GET.get('search')
+    if search:
+        users = users.filter(
+            models.Q(full_name__icontains=search) |
+            models.Q(phone_number__icontains=search) |
+            models.Q(email__icontains=search)
+        )
+    
+    limit = int(request.GET.get('limit', 50))
+    offset = int(request.GET.get('offset', 0))
+    
+    total = users.count()
+    users = users[offset:offset + limit]
+    
+    serializer = UserSerializer(users, many=True)
+    return Response({
+        'success': True,
+        'data': {
+            'users': serializer.data,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+        }
+    }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_stats(request):
+    """Get user statistics (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to view user statistics'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    total_users = User.objects.count()
+    active_users = User.objects.filter(is_active=True).count()
+    verified_users = User.objects.filter(is_verified=True).count()
+    
+    users_by_type = {}
+    user_types = ['customer', 'driver', 'station_owner', 'admin']
+    for user_type in user_types:
+        users_by_type[user_type] = User.objects.filter(user_type=user_type).count()
+    
+    today = timezone.now().date()
+    first_day_of_month = today.replace(day=1)
+    new_users_this_month = User.objects.filter(date_joined__date__gte=first_day_of_month).count()
+    
+    daily_users = []
+    for i in range(7):
+        date = today - timedelta(days=i)
+        count = User.objects.filter(date_joined__date=date).count()
+        daily_users.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'count': count
+        })
+    
+    return Response({
+        'success': True,
+        'data': {
+            'total_users': total_users,
+            'active_users': active_users,
+            'verified_users': verified_users,
+            'users_by_type': users_by_type,
+            'new_users_this_month': new_users_this_month,
+            'daily_users': daily_users
+        }
+    }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_detail(request, user_id):
+    """Get a specific user's details (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to view this user'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        serializer = UserSerializer(user)
+        
+        total_orders = Order.objects.filter(user=user).count()
+        total_payments = Payment.objects.filter(user=user, status='completed').aggregate(
+            total=models.Sum('amount')
+        )['total'] or 0
+        
+        return Response({
+            'success': True,
+            'data': {
+                'user': serializer.data,
+                'stats': {
+                    'total_orders': total_orders,
+                    'total_spent': float(total_payments),
+                    'member_since': user.date_joined.strftime('%B %d, %Y'),
+                    'last_active': user.last_activity.strftime('%B %d, %Y %H:%M') if user.last_activity else 'Never',
+                }
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['PUT', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def user_update(request, user_id):
+    """Update a user (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to update this user'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        
+        allowed_fields = [
+            'full_name', 'email', 'phone_number', 'user_type', 
+            'is_active', 'is_verified', 'is_staff', 'is_superuser',
+            'location', 'vehicle_type', 'vehicle_number', 'license_number'
+        ]
+        
+        for field in allowed_fields:
+            if field in request.data:
+                setattr(user, field, request.data[field])
+        
+        if 'password' in request.data and request.data['password']:
+            user.set_password(request.data['password'])
+        
+        user.save()
+        
+        serializer = UserSerializer(user)
+        return Response({
+            'success': True,
+            'message': 'User updated successfully',
+            'data': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def user_delete(request, user_id):
+    """Delete a user (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to delete this user'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        
+        if user.id == request.user.id:
+            return Response({
+                'success': False,
+                'message': 'You cannot delete your own account'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.delete()
+        return Response({
+            'success': True,
+            'message': f'User {user.full_name} deleted successfully'
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def user_create(request):
+    """Create a new user (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to create users'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    required_fields = ['full_name', 'phone_number', 'email', 'password']
+    for field in required_fields:
+        if not request.data.get(field):
+            return Response({
+                'success': False,
+                'message': f'{field} is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(phone_number=request.data['phone_number']).exists():
+        return Response({
+            'success': False,
+            'message': 'User with this phone number already exists'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    if User.objects.filter(email=request.data['email']).exists():
+        return Response({
+            'success': False,
+            'message': 'User with this email already exists'
+        }, status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+        user = User.objects.create_user(
+            phone_number=request.data['phone_number'],
+            email=request.data['email'],
+            full_name=request.data['full_name'],
+            password=request.data['password'],
+            user_type=request.data.get('user_type', 'customer'),
+            is_active=request.data.get('is_active', True),
+            is_verified=request.data.get('is_verified', False),
+            location=request.data.get('location', ''),
+            vehicle_type=request.data.get('vehicle_type', ''),
+            vehicle_number=request.data.get('vehicle_number', ''),
+            license_number=request.data.get('license_number', ''),
+        )
+        
+        if request.data.get('is_staff'):
+            user.is_staff = request.data['is_staff']
+        if request.data.get('is_superuser'):
+            user.is_superuser = request.data['is_superuser']
+        user.save()
+        
+        serializer = UserSerializer(user)
+        return Response({
+            'success': True,
+            'message': 'User created successfully',
+            'data': serializer.data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error creating user: {str(e)}'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def user_toggle_active(request, user_id):
+    """Toggle user active status (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to modify this user'
+        }, status=status.HTTP_403_FORBIDDEN)
+    
+    try:
+        user = User.objects.get(id=user_id)
+        
+        if user.id == request.user.id:
+            return Response({
+                'success': False,
+                'message': 'You cannot modify your own account status'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        user.is_active = not user.is_active
+        user.save()
+        
+        return Response({
+            'success': True,
+            'message': f'User {user.full_name} is now {"active" if user.is_active else "inactive"}',
+            'data': {
+                'user_id': user.id,
+                'is_active': user.is_active
+            }
+        }, status=status.HTTP_200_OK)
+        
+    except User.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'User not found'
+        }, status=status.HTTP_404_NOT_FOUND)
 
 # =========================================================
-# DASHBOARD VIEWS
+# DASHBOARD API VIEWS
 # =========================================================
 
 class DashboardView(APIView):
@@ -753,15 +917,12 @@ class DashboardView(APIView):
     def get(self, request):
         user = request.user
         
-        # Get orders
         orders = Order.objects.filter(user=user).order_by('-created_at')[:10]
         total_orders = Order.objects.filter(user=user).count()
         active_orders = Order.objects.filter(user=user, status__in=['pending', 'processing', 'shipped']).count()
         
-        # Get recommended stations (top rated)
         recommended_stations = Station.objects.filter(is_open=True).order_by('-rating')[:5]
         
-        # Get notifications
         notifications = Notification.objects.filter(user=user, is_read=False)[:5]
         
         data = {
@@ -778,27 +939,106 @@ class DashboardView(APIView):
             'data': data
         }, status=status.HTTP_200_OK)
 
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_stats(request):
+    """Get dashboard statistics"""
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    
+    total_stations = Station.objects.count()
+    active_stations = Station.objects.filter(is_open=True).count()
+    total_agents = DeliveryAgent.objects.count()
+    active_agents = DeliveryAgent.objects.filter(status='available').count()
+    total_orders = Order.objects.count()
+    pending_orders = Order.objects.filter(status='pending').count()
+    completed_orders = Order.objects.filter(status='delivered').count()
+    
+    total_revenue = Payment.objects.filter(status='completed').aggregate(
+        total=models.Sum('amount')
+    )['total'] or 0
+    
+    week_revenue = Payment.objects.filter(
+        status='completed',
+        created_at__gte=week_ago
+    ).aggregate(total=models.Sum('amount'))['total'] or 0
+    
+    recent_orders = Order.objects.order_by('-created_at')[:5]
+    unread_notifications = Notification.objects.filter(is_read=False).count()
+    total_vehicles = Vehicle.objects.count()
+    vehicles_in_maintenance = Vehicle.objects.filter(status='maintenance').count()
+    
+    data = {
+        'total_stations': total_stations,
+        'active_stations': active_stations,
+        'total_agents': total_agents,
+        'active_agents': active_agents,
+        'total_orders': total_orders,
+        'pending_orders': pending_orders,
+        'completed_orders': completed_orders,
+        'total_revenue': float(total_revenue),
+        'week_revenue': float(week_revenue),
+        'recent_orders': OrderSerializer(recent_orders, many=True).data,
+        'unread_notifications': unread_notifications,
+        'total_vehicles': total_vehicles,
+        'vehicles_in_maintenance': vehicles_in_maintenance,
+    }
+    
+    return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def dashboard_chart_data(request):
+    """Get chart data for dashboard"""
+    days = int(request.GET.get('days', 7))
+    start_date = timezone.now().date() - timedelta(days=days)
+    
+    order_data = []
+    
+    for i in range(days):
+        date = start_date + timedelta(days=i)
+        
+        orders = Order.objects.filter(
+            created_at__date=date
+        ).count()
+        
+        revenue = Payment.objects.filter(
+            status='completed',
+            created_at__date=date
+        ).aggregate(total=models.Sum('amount'))['total'] or 0
+        
+        order_data.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'orders': orders,
+            'revenue': float(revenue)
+        })
+    
+    return Response({
+        'order_data': order_data,
+    })
+
+# =========================================================
+# STATION API VIEWS - UPDATED WITH IMAGE URLS (FIXED)
+# =========================================================
+
 class StationsView(APIView):
+    """Get all stations with full image URLs"""
     permission_classes = [AllowAny]
     
     def get(self, request):
         stations = Station.objects.all()
         
-        # Filter by search query
         search = request.query_params.get('search', None)
         if search:
             stations = stations.filter(
                 models.Q(name__icontains=search) | 
-                models.Q(location__icontains=search) |
                 models.Q(address__icontains=search)
             )
         
-        # Filter by fuel type
         fuel_type = request.query_params.get('fuel_type', None)
         if fuel_type:
             stations = stations.filter(fuel_types__icontains=fuel_type)
         
-        # Filter by open/closed
         is_open = request.query_params.get('is_open', None)
         if is_open is not None:
             if is_open.lower() == 'true':
@@ -806,22 +1046,123 @@ class StationsView(APIView):
             elif is_open.lower() == 'false':
                 stations = stations.filter(is_open=False)
         
-        # Pagination
         limit = int(request.query_params.get('limit', 20))
         offset = int(request.query_params.get('offset', 0))
         
         total = stations.count()
         stations = stations[offset:offset + limit]
         
+        # Build response with full image URLs
+        station_data = []
+        for station in stations:
+            # Get full image URL - IMPORTANT FIX
+            image_url = ''
+            if station.image:
+                # Check if it's already a full URL
+                if station.image.startswith('http'):
+                    image_url = station.image
+                else:
+                    # Build absolute URL for the image
+                    image_url = request.build_absolute_uri('/media/' + station.image)
+            
+            station_data.append({
+                'id': str(station.id),
+                'name': station.name,
+                'address': station.address,
+                'location': station.address,  # For backward compatibility
+                'rating': float(station.rating) if station.rating else 0,
+                'reviews_count': station.reviews_count or 0,
+                'is_open': station.is_open,
+                'is_24_7': station.is_24_7,
+                'price_per_gallon': float(station.price_per_gallon) if station.price_per_gallon else 0,
+                'fuel_types': station.fuel_types or 'Petrol,Diesel,Gas',
+                'image': image_url,  # Full URL
+                'latitude': float(station.latitude) if station.latitude else None,
+                'longitude': float(station.longitude) if station.longitude else None,
+                'phone': station.phone or '',
+                'email': station.email or '',
+            })
+        
         return Response({
             'success': True,
             'data': {
-                'stations': StationSerializer(stations, many=True).data,
+                'stations': station_data,
                 'total': total,
                 'limit': limit,
                 'offset': offset,
             }
         }, status=status.HTTP_200_OK)
+
+
+class TopStationsView(APIView):
+    """Get top rated stations with full image URLs"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        stations = Station.objects.filter(is_open=True).order_by('-rating')[:10]
+        
+        station_data = []
+        for station in stations:
+            # Get full image URL - IMPORTANT FIX
+            image_url = ''
+            if station.image:
+                # Check if it's already a full URL
+                if station.image.startswith('http'):
+                    image_url = station.image
+                else:
+                    # Build absolute URL for the image
+                    image_url = request.build_absolute_uri('/media/' + station.image)
+            
+            station_data.append({
+                'id': str(station.id),
+                'name': station.name,
+                'address': station.address,
+                'location': station.address,  # For backward compatibility
+                'rating': float(station.rating) if station.rating else 0,
+                'reviews_count': station.reviews_count or 0,
+                'is_open': station.is_open,
+                'is_24_7': station.is_24_7,
+                'price_per_gallon': float(station.price_per_gallon) if station.price_per_gallon else 0,
+                'fuel_types': station.fuel_types or 'Petrol,Diesel,Gas',
+                'image': image_url,  # Full URL
+                'latitude': float(station.latitude) if station.latitude else None,
+                'longitude': float(station.longitude) if station.longitude else None,
+                'phone': station.phone or '',
+                'email': station.email or '',
+            })
+        
+        return Response({
+            'success': True,
+            'data': station_data
+        }, status=status.HTTP_200_OK)
+
+
+# =========================================================
+# STATION API VIEWS - REST
+# =========================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def station_list_create(request):
+    """List all stations or create a new station"""
+    if request.method == 'GET':
+        stations = Station.objects.all()
+        serializer = StationSerializer(stations, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to create stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = StationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 class StationDetailView(APIView):
     permission_classes = [AllowAny]
@@ -839,16 +1180,221 @@ class StationDetailView(APIView):
                 'message': 'Station not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
-class TopStationsView(APIView):
-    permission_classes = [AllowAny]
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def station_detail(request, pk):
+    """Get, update or delete a station"""
+    try:
+        station = Station.objects.get(pk=pk)
+    except Station.DoesNotExist:
+        return Response({'error': 'Station not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        serializer = StationSerializer(station)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to update stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = StationSerializer(station, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to delete stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        station.delete()
+        return Response({'message': 'Station deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
+# =========================================================
+# STATION MANAGEMENT VIEWS
+# =========================================================
+
+class StationManagementView(APIView):
+    """View for managing stations (CRUD operations)"""
+    permission_classes = [IsAuthenticated]
     
     def get(self, request):
-        stations = Station.objects.filter(is_open=True).order_by('-rating')[:10]
+        """Get all stations with optional filtering"""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to manage stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        stations = Station.objects.all()
+        
+        search = request.query_params.get('search', None)
+        if search:
+            stations = stations.filter(
+                models.Q(name__icontains=search) | 
+                models.Q(address__icontains=search)
+            )
+        
+        status_filter = request.query_params.get('status', None)
+        if status_filter == 'open':
+            stations = stations.filter(is_open=True)
+        elif status_filter == 'closed':
+            stations = stations.filter(is_open=False)
+        
+        fuel_type = request.query_params.get('fuel_type', None)
+        if fuel_type:
+            stations = stations.filter(fuel_types__icontains=fuel_type)
+        
+        limit = int(request.query_params.get('limit', 100))
+        offset = int(request.query_params.get('offset', 0))
+        
+        total = stations.count()
+        stations = stations[offset:offset + limit]
         
         return Response({
             'success': True,
-            'data': StationSerializer(stations, many=True).data
+            'data': {
+                'stations': StationSerializer(stations, many=True).data,
+                'total': total,
+                'limit': limit,
+                'offset': offset,
+            }
         }, status=status.HTTP_200_OK)
+    
+    def post(self, request):
+        """Create a new station"""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to create stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        required_fields = ['name', 'address']
+        for field in required_fields:
+            if not request.data.get(field):
+                return Response({
+                    'success': False,
+                    'message': f'{field} is required'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            station = Station.objects.create(
+                name=request.data.get('name'),
+                address=request.data.get('address'),
+                latitude=request.data.get('latitude'),
+                longitude=request.data.get('longitude'),
+                rating=request.data.get('rating', 4.0),
+                reviews_count=request.data.get('reviews_count', 0),
+                image=request.data.get('image', ''),
+                is_open=request.data.get('is_open', True),
+                is_24_7=request.data.get('is_24_7', False),
+                price_per_gallon=request.data.get('price_per_gallon', 3.60),
+                fuel_types=request.data.get('fuel_types', 'Petrol,Diesel,Gas'),
+                phone=request.data.get('phone', ''),
+                email=request.data.get('email', ''),
+            )
+            
+            return Response({
+                'success': True,
+                'message': 'Station created successfully',
+                'data': StationDetailSerializer(station).data
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error creating station: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def put(self, request):
+        """Update an existing station"""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to update stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        station_id = request.data.get('id')
+        if not station_id:
+            return Response({
+                'success': False,
+                'message': 'Station ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            station = Station.objects.get(id=station_id)
+            
+            station.name = request.data.get('name', station.name)
+            station.address = request.data.get('address', station.address)
+            station.latitude = request.data.get('latitude', station.latitude)
+            station.longitude = request.data.get('longitude', station.longitude)
+            station.rating = request.data.get('rating', station.rating)
+            station.reviews_count = request.data.get('reviews_count', station.reviews_count)
+            station.image = request.data.get('image', station.image)
+            station.is_open = request.data.get('is_open', station.is_open)
+            station.is_24_7 = request.data.get('is_24_7', station.is_24_7)
+            station.price_per_gallon = request.data.get('price_per_gallon', station.price_per_gallon)
+            station.fuel_types = request.data.get('fuel_types', station.fuel_types)
+            station.phone = request.data.get('phone', station.phone)
+            station.email = request.data.get('email', station.email)
+            station.save()
+            
+            return Response({
+                'success': True,
+                'message': 'Station updated successfully',
+                'data': StationDetailSerializer(station).data
+            }, status=status.HTTP_200_OK)
+            
+        except Station.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Station not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': f'Error updating station: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request):
+        """Delete a station"""
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to delete stations'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        station_id = request.data.get('id')
+        if not station_id:
+            return Response({
+                'success': False,
+                'message': 'Station ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            station = Station.objects.get(id=station_id)
+            station.delete()
+            return Response({
+                'success': True,
+                'message': 'Station deleted successfully'
+            }, status=status.HTTP_200_OK)
+        except Station.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Station not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+# =========================================================
+# ORDER API VIEWS
+# =========================================================
 
 class OrdersView(APIView):
     permission_classes = [IsAuthenticated]
@@ -856,7 +1402,6 @@ class OrdersView(APIView):
     def get(self, request):
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
         
-        # Filter by status
         status_filter = request.query_params.get('status', None)
         if status_filter:
             orders = orders.filter(status=status_filter)
@@ -876,6 +1421,39 @@ class OrdersView(APIView):
                 'offset': offset,
             }
         }, status=status.HTTP_200_OK)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_list(request):
+    """List all orders with filters"""
+    orders = Order.objects.all()
+    
+    status_filter = request.GET.get('status')
+    if status_filter:
+        orders = orders.filter(status=status_filter)
+    
+    date_from = request.GET.get('date_from')
+    if date_from:
+        orders = orders.filter(created_at__date__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        orders = orders.filter(created_at__date__lte=date_to)
+    
+    serializer = OrderSerializer(orders, many=True)
+    return Response(serializer.data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def order_detail(request, pk):
+    """Get order details"""
+    try:
+        order = Order.objects.get(pk=pk)
+    except Order.DoesNotExist:
+        return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    serializer = OrderSerializer(order)
+    return Response(serializer.data)
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
@@ -900,7 +1478,6 @@ class CreateOrderView(APIView):
                 'message': 'Station not found'
             }, status=status.HTTP_404_NOT_FOUND)
         
-        # Calculate total amount (example: $3.60 per gallon)
         total_amount = float(quantity) * float(station.price_per_gallon)
         
         order = Order.objects.create(
@@ -913,7 +1490,6 @@ class CreateOrderView(APIView):
             status='pending'
         )
         
-        # Create notification
         Notification.objects.create(
             user=request.user,
             title='Order Created',
@@ -927,280 +1503,216 @@ class CreateOrderView(APIView):
             'data': OrderSerializer(order).data
         }, status=status.HTTP_201_CREATED)
 
-class NotificationsView(APIView):
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:20]
-        
-        return Response({
-            'success': True,
-            'data': NotificationSerializer(notifications, many=True).data
-        }, status=status.HTTP_200_OK)
-    
-    def patch(self, request):
-        notification_id = request.data.get('notification_id')
-        if notification_id:
-            try:
-                notification = Notification.objects.get(id=notification_id, user=request.user)
-                notification.is_read = True
-                notification.save()
-                return Response({
-                    'success': True,
-                    'message': 'Notification marked as read'
-                }, status=status.HTTP_200_OK)
-            except Notification.DoesNotExist:
-                return Response({
-                    'success': False,
-                    'message': 'Notification not found'
-                }, status=status.HTTP_404_NOT_FOUND)
-        
-        # Mark all as read
-        Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
-        return Response({
-            'success': True,
-            'message': 'All notifications marked as read'
-        }, status=status.HTTP_200_OK)
+# =========================================================
+# NOTIFICATION API VIEWS
+# =========================================================
 
-# Add these views for station management
-
-class StationManagementView(APIView):
-    """View for managing stations (CRUD operations)"""
-    permission_classes = [IsAuthenticated]
-    
-    def get(self, request):
-        # Get all stations with optional filtering
-        stations = Station.objects.all()
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def notification_list_create(request):
+    """List notifications or create a new notification"""
+    if request.method == 'GET':
+        if request.user.is_staff or request.user.is_superuser:
+            notifications = Notification.objects.all().order_by('-created_at')
+        else:
+            notifications = Notification.objects.filter(user=request.user).order_by('-created_at')
         
-        # Filter by search
-        search = request.query_params.get('search', None)
-        if search:
-            stations = stations.filter(
-                models.Q(name__icontains=search) | 
-                models.Q(location__icontains=search) |
-                models.Q(address__icontains=search)
-            )
+        is_read = request.GET.get('is_read')
+        if is_read is not None:
+            if is_read.lower() == 'true':
+                notifications = notifications.filter(is_read=True)
+            elif is_read.lower() == 'false':
+                notifications = notifications.filter(is_read=False)
         
-        # Filter by status
-        status_filter = request.query_params.get('status', None)
-        if status_filter == 'open':
-            stations = stations.filter(is_open=True)
-        elif status_filter == 'closed':
-            stations = stations.filter(is_open=False)
+        limit = int(request.GET.get('limit', 50))
+        offset = int(request.GET.get('offset', 0))
         
-        # Pagination
-        limit = int(request.query_params.get('limit', 100))
-        offset = int(request.query_params.get('offset', 0))
+        total = notifications.count()
+        notifications = notifications[offset:offset + limit]
         
-        total = stations.count()
-        stations = stations[offset:offset + limit]
-        
+        serializer = NotificationSerializer(notifications, many=True)
         return Response({
             'success': True,
             'data': {
-                'stations': StationSerializer(stations, many=True).data,
+                'notifications': serializer.data,
                 'total': total,
                 'limit': limit,
                 'offset': offset,
             }
         }, status=status.HTTP_200_OK)
     
-    def post(self, request):
-        """Create a new station"""
-        # Validate required fields
-        required_fields = ['name', 'location', 'address']
-        for field in required_fields:
-            if not request.data.get(field):
-                return Response({
-                    'success': False,
-                    'message': f'{field} is required'
-                }, status=status.HTTP_400_BAD_REQUEST)
+    elif request.method == 'POST':
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to create notifications'
+            }, status=status.HTTP_403_FORBIDDEN)
         
-        try:
-            station = Station.objects.create(
-                name=request.data.get('name'),
-                location=request.data.get('location'),
-                address=request.data.get('address'),
-                latitude=request.data.get('latitude'),
-                longitude=request.data.get('longitude'),
-                rating=request.data.get('rating', 4.0),
-                reviews_count=request.data.get('reviews_count', 0),
-                image=request.data.get('image', ''),
-                is_open=request.data.get('is_open', True),
-                is_24_7=request.data.get('is_24_7', False),
-                price_per_gallon=request.data.get('price_per_gallon', 3.60),
-                fuel_types=request.data.get('fuel_types', 'Petrol,Diesel,Gas'),
-            )
-            
-            # Add fuel prices if provided
-            prices = request.data.get('prices', [])
-            for price_data in prices:
-                FuelPrice.objects.create(
-                    station=station,
-                    fuel_type=price_data.get('fuel_type', 'petrol'),
-                    price=price_data.get('price', 0)
-                )
-            
+        serializer = NotificationSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
             return Response({
                 'success': True,
-                'message': 'Station created successfully',
-                'data': StationDetailSerializer(station).data
+                'message': 'Notification created successfully',
+                'data': serializer.data
             }, status=status.HTTP_201_CREATED)
-            
-        except Exception as e:
-            return Response({
-                'success': False,
-                'message': f'Error creating station: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    def put(self, request):
-        """Update an existing station"""
-        station_id = request.data.get('id')
-        if not station_id:
-            return Response({
-                'success': False,
-                'message': 'Station ID is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            station = Station.objects.get(id=station_id)
-            
-            # Update fields
-            station.name = request.data.get('name', station.name)
-            station.location = request.data.get('location', station.location)
-            station.address = request.data.get('address', station.address)
-            station.latitude = request.data.get('latitude', station.latitude)
-            station.longitude = request.data.get('longitude', station.longitude)
-            station.rating = request.data.get('rating', station.rating)
-            station.reviews_count = request.data.get('reviews_count', station.reviews_count)
-            station.image = request.data.get('image', station.image)
-            station.is_open = request.data.get('is_open', station.is_open)
-            station.is_24_7 = request.data.get('is_24_7', station.is_24_7)
-            station.price_per_gallon = request.data.get('price_per_gallon', station.price_per_gallon)
-            station.fuel_types = request.data.get('fuel_types', station.fuel_types)
-            station.save()
-            
-            return Response({
-                'success': True,
-                'message': 'Station updated successfully',
-                'data': StationDetailSerializer(station).data
-            }, status=status.HTTP_200_OK)
-            
-        except Station.DoesNotExist:
-            return Response({
-                'success': False,
-                'message': 'Station not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
-            return Response({
-                'success': False,
-                'message': f'Error updating station: {str(e)}'
-            }, status=status.HTTP_400_BAD_REQUEST)
-    
-    def delete(self, request):
-        """Delete a station"""
-        station_id = request.data.get('id')
-        if not station_id:
-            return Response({
-                'success': False,
-                'message': 'Station ID is required'
-            }, status=status.HTTP_400_BAD_REQUEST)
-        
-        try:
-            station = Station.objects.get(id=station_id)
-            station.delete()
-            return Response({
-                'success': True,
-                'message': 'Station deleted successfully'
-            }, status=status.HTTP_200_OK)
-        except Station.DoesNotExist:
-            return Response({
-                'success': False,
-                'message': 'Station not found'
-            }, status=status.HTTP_404_NOT_FOUND)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Add these imports at the top
-from .models import Vehicle, VehicleCost, VehicleIssue, VehicleMeterHistory
-from .serializers import (
-    # ... existing imports
-    VehicleSerializer, VehicleDetailSerializer, 
-    VehicleDashboardDataSerializer, VehicleCostSerializer,
-    VehicleIssueSerializer
-)
+@api_view(['PUT'])
+@permission_classes([IsAuthenticated])
+def notification_mark_read(request, pk):
+    """Mark a notification as read"""
+    try:
+        if request.user.is_staff or request.user.is_superuser:
+            notification = Notification.objects.get(pk=pk)
+        else:
+            notification = Notification.objects.get(pk=pk, user=request.user)
+        
+        notification.is_read = True
+        notification.save()
+        return Response({
+            'success': True,
+            'message': 'Notification marked as read'
+        }, status=status.HTTP_200_OK)
+        
+    except Notification.DoesNotExist:
+        return Response({
+            'success': False,
+            'message': 'Notification not found'
+        }, status=status.HTTP_404_NOT_FOUND)
 
-class VehicleDashboardView(APIView):
-    """Get vehicle dashboard data"""
-    permission_classes = [AllowAny]
+# =========================================================
+# PAYMENT API VIEWS
+# =========================================================
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def payment_list(request):
+    """List all payments (Admin only)"""
+    if not request.user.is_staff and not request.user.is_superuser:
+        return Response({
+            'success': False,
+            'message': 'You do not have permission to view payments'
+        }, status=status.HTTP_403_FORBIDDEN)
     
-    def get(self, request, vehicle_id=None):
-        try:
-            if vehicle_id:
-                vehicle = Vehicle.objects.get(id=vehicle_id)
-            else:
-                # Get first vehicle or most recent
-                vehicle = Vehicle.objects.first()
-                if not vehicle:
-                    return Response({
-                        'success': False,
-                        'message': 'No vehicles found'
-                    }, status=status.HTTP_404_NOT_FOUND)
-            
-            # Get costs
-            costs = VehicleCost.objects.filter(vehicle=vehicle)
-            total_cost = sum(c.amount for c in costs if c.cost_type == 'total')
-            service_cost = sum(c.amount for c in costs if c.cost_type == 'service')
-            other_cost = sum(c.amount for c in costs if c.cost_type == 'other')
-            
-            # Get issues
-            issues = VehicleIssue.objects.filter(vehicle=vehicle)
-            overdue_issues = issues.filter(is_overdue=True).count()
-            open_issues = issues.filter(is_open=True).count()
-            total_issues = issues.count()
-            
-            # Get meter history (last 12 readings)
-            meter_history = VehicleMeterHistory.objects.filter(vehicle=vehicle)[:12]
-            meter_usage = [m.reading for m in meter_history] if meter_history else [7200, 7500, 7800, 8100, 8400, 8700, 9000, 9300, 9600, 9900, 10200, 10500]
-            
-            data = {
-                'vehicle': VehicleSerializer(vehicle).data,
-                'total_cost': total_cost,
-                'service_cost': service_cost,
-                'other_cost': other_cost,
-                'overdue_issues': overdue_issues,
-                'open_issues': open_issues,
-                'total_issues': total_issues,
-                'meter_usage': meter_usage,
-            }
-            
-            return Response({
-                'success': True,
-                'data': data
-            }, status=status.HTTP_200_OK)
-            
-        except Vehicle.DoesNotExist:
+    payments = Payment.objects.all().order_by('-created_at')
+    
+    status_filter = request.GET.get('status')
+    if status_filter:
+        payments = payments.filter(status=status_filter)
+    
+    date_from = request.GET.get('date_from')
+    if date_from:
+        payments = payments.filter(created_at__date__gte=date_from)
+    
+    date_to = request.GET.get('date_to')
+    if date_to:
+        payments = payments.filter(created_at__date__lte=date_to)
+    
+    limit = int(request.GET.get('limit', 50))
+    offset = int(request.GET.get('offset', 0))
+    
+    total = payments.count()
+    payments = payments[offset:offset + limit]
+    
+    serializer = PaymentSerializer(payments, many=True)
+    return Response({
+        'success': True,
+        'data': {
+            'payments': serializer.data,
+            'total': total,
+            'limit': limit,
+            'offset': offset,
+        }
+    }, status=status.HTTP_200_OK)
+
+# =========================================================
+# VEHICLE API VIEWS
+# =========================================================
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def vehicle_list_create(request):
+    """List all vehicles or create a new vehicle"""
+    if request.method == 'GET':
+        vehicles = Vehicle.objects.all()
+        
+        status_filter = request.GET.get('status')
+        if status_filter:
+            vehicles = vehicles.filter(status=status_filter)
+        
+        search = request.GET.get('search')
+        if search:
+            vehicles = vehicles.filter(
+                models.Q(name__icontains=search) |
+                models.Q(vin__icontains=search) |
+                models.Q(license_plate__icontains=search) |
+                models.Q(driver_name__icontains=search)
+            )
+        
+        serializer = VehicleSerializer(vehicles, many=True)
+        return Response(serializer.data)
+    
+    elif request.method == 'POST':
+        if not request.user.is_staff and not request.user.is_superuser:
             return Response({
                 'success': False,
-                'message': 'Vehicle not found'
-            }, status=status.HTTP_404_NOT_FOUND)
-        except Exception as e:
+                'message': 'You do not have permission to create vehicles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = VehicleSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def vehicle_detail(request, pk):
+    """Get, update or delete a vehicle"""
+    try:
+        vehicle = Vehicle.objects.get(pk=pk)
+    except Vehicle.DoesNotExist:
+        return Response({'error': 'Vehicle not found'}, status=status.HTTP_404_NOT_FOUND)
+    
+    if request.method == 'GET':
+        serializer = VehicleSerializer(vehicle)
+        return Response(serializer.data)
+    
+    elif request.method == 'PUT':
+        if not request.user.is_staff and not request.user.is_superuser:
             return Response({
                 'success': False,
-                'message': str(e)
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'message': 'You do not have permission to update vehicles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        serializer = VehicleSerializer(vehicle, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    elif request.method == 'DELETE':
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to delete vehicles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        vehicle.delete()
+        return Response({'message': 'Vehicle deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 class VehicleListView(APIView):
-    """List all vehicles"""
+    """List all vehicles with filters"""
     permission_classes = [AllowAny]
     
     def get(self, request):
         vehicles = Vehicle.objects.all()
         
-        # Filter by status
         status_filter = request.query_params.get('status', None)
         if status_filter:
             vehicles = vehicles.filter(status=status_filter)
         
-        # Search
         search = request.query_params.get('search', None)
         if search:
             vehicles = vehicles.filter(
@@ -1231,7 +1743,12 @@ class VehicleCRUDView(APIView):
     permission_classes = [IsAuthenticated]
     
     def post(self, request):
-        # Create new vehicle
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to create vehicles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         serializer = VehicleSerializer(data=request.data)
         if serializer.is_valid():
             vehicle = serializer.save()
@@ -1246,6 +1763,12 @@ class VehicleCRUDView(APIView):
         }, status=status.HTTP_400_BAD_REQUEST)
     
     def put(self, request, vehicle_id):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to update vehicles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         try:
             vehicle = Vehicle.objects.get(id=vehicle_id)
             serializer = VehicleSerializer(vehicle, data=request.data, partial=True)
@@ -1267,6 +1790,12 @@ class VehicleCRUDView(APIView):
             }, status=status.HTTP_404_NOT_FOUND)
     
     def delete(self, request, vehicle_id):
+        if not request.user.is_staff and not request.user.is_superuser:
+            return Response({
+                'success': False,
+                'message': 'You do not have permission to delete vehicles'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
         try:
             vehicle = Vehicle.objects.get(id=vehicle_id)
             vehicle.delete()
@@ -1279,3 +1808,57 @@ class VehicleCRUDView(APIView):
                 'success': False,
                 'message': 'Vehicle not found'
             }, status=status.HTTP_404_NOT_FOUND)
+
+class VehicleDashboardView(APIView):
+    """Get vehicle dashboard data"""
+    permission_classes = [AllowAny]
+    
+    def get(self, request, vehicle_id=None):
+        try:
+            if vehicle_id:
+                vehicle = Vehicle.objects.get(id=vehicle_id)
+            else:
+                vehicle = Vehicle.objects.first()
+                if not vehicle:
+                    return Response({
+                        'success': False,
+                        'message': 'No vehicles found'
+                    }, status=status.HTTP_404_NOT_FOUND)
+            
+            costs = VehicleCost.objects.filter(vehicle=vehicle)
+            total_cost = sum(c.amount for c in costs if c.cost_type == 'total')
+            service_cost = sum(c.amount for c in costs if c.cost_type == 'service')
+            other_cost = sum(c.amount for c in costs if c.cost_type == 'other')
+            
+            issues = VehicleIssue.objects.filter(vehicle=vehicle)
+            overdue_issues = issues.filter(is_overdue=True).count()
+            open_issues = issues.filter(is_open=True).count()
+            
+            meter_history = VehicleMeterHistory.objects.filter(vehicle=vehicle)[:12]
+            meter_usage = [m.reading for m in meter_history] if meter_history else [7200, 7500, 7800, 8100, 8400, 8700, 9000, 9300, 9600, 9900, 10200, 10500]
+            
+            data = {
+                'vehicle': VehicleSerializer(vehicle).data,
+                'total_cost': total_cost,
+                'service_cost': service_cost,
+                'other_cost': other_cost,
+                'overdue_issues': overdue_issues,
+                'open_issues': open_issues,
+                'meter_usage': meter_usage,
+            }
+            
+            return Response({
+                'success': True,
+                'data': data
+            }, status=status.HTTP_200_OK)
+            
+        except Vehicle.DoesNotExist:
+            return Response({
+                'success': False,
+                'message': 'Vehicle not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({
+                'success': False,
+                'message': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)

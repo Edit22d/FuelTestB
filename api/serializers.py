@@ -1,8 +1,10 @@
+# api/serializers.py
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from .models import (
     User, Station, FuelPrice, Order, Notification,
-    Vehicle, VehicleCost, VehicleIssue, VehicleMeterHistory
+    Vehicle, VehicleCost, VehicleIssue, VehicleMeterHistory,
+    Payment, DeliveryAgent, SecurityLog, DashboardStats
 )
 from django.conf import settings
 import re
@@ -11,7 +13,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'phone_number', 'email', 'full_name', 'user_type', 
-                  'location', 'is_verified', 'created_at']
+                  'location', 'is_verified', 'is_active', 'created_at', 'last_activity']
 
 class RegisterSerializer(serializers.Serializer):
     phone_number = serializers.CharField(max_length=20)
@@ -116,6 +118,55 @@ class LoginSerializer(serializers.Serializer):
         return data
 
 # =========================================================
+# PAYMENT SERIALIZER
+# =========================================================
+
+class PaymentSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
+    order_reference = serializers.CharField(source='order.order_reference', read_only=True)
+    
+    class Meta:
+        model = Payment
+        fields = ['id', 'order', 'order_reference', 'user', 'user_name', 'amount', 
+                  'payment_method', 'transaction_id', 'status', 'payment_data', 
+                  'created_at', 'updated_at']
+
+# =========================================================
+# DELIVERY AGENT SERIALIZER
+# =========================================================
+
+class DeliveryAgentSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
+    
+    class Meta:
+        model = DeliveryAgent
+        fields = ['id', 'user', 'user_name', 'phone', 'vehicle_type', 'vehicle_plate',
+                  'current_location', 'status', 'rating', 'total_deliveries',
+                  'created_at', 'updated_at']
+
+# =========================================================
+# SECURITY LOG SERIALIZER
+# =========================================================
+
+class SecurityLogSerializer(serializers.ModelSerializer):
+    user_name = serializers.CharField(source='user.full_name', read_only=True, allow_null=True)
+    
+    class Meta:
+        model = SecurityLog
+        fields = ['id', 'user', 'user_name', 'event_type', 'ip_address', 
+                  'user_agent', 'location', 'details', 'created_at']
+
+# =========================================================
+# DASHBOARD STATS SERIALIZER
+# =========================================================
+
+class DashboardStatsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DashboardStats
+        fields = ['date', 'total_orders', 'total_revenue', 'active_stations',
+                  'active_agents', 'pending_orders', 'completed_orders']
+
+# =========================================================
 # STATION SERIALIZERS
 # =========================================================
 
@@ -124,7 +175,7 @@ class StationSerializer(serializers.ModelSerializer):
         model = Station
         fields = ['id', 'name', 'location', 'address', 'latitude', 'longitude', 
                   'rating', 'reviews_count', 'image', 'is_open', 'is_24_7', 
-                  'price_per_gallon', 'fuel_types']
+                  'price_per_gallon', 'fuel_types', 'created_at']
 
 class FuelPriceSerializer(serializers.ModelSerializer):
     class Meta:
@@ -138,7 +189,7 @@ class StationDetailSerializer(serializers.ModelSerializer):
         model = Station
         fields = ['id', 'name', 'location', 'address', 'latitude', 'longitude', 
                   'rating', 'reviews_count', 'image', 'is_open', 'is_24_7', 
-                  'price_per_gallon', 'fuel_types', 'prices']
+                  'price_per_gallon', 'fuel_types', 'prices', 'created_at', 'updated_at']
 
 # =========================================================
 # VEHICLE SERIALIZERS
@@ -147,22 +198,26 @@ class StationDetailSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Vehicle
-        fields = '__all__'
+        fields = ['id', 'name', 'year', 'make', 'model', 'trim', 'vin', 'license_plate',
+                  'fuel_type', 'meter_reading', 'status', 'vehicle_type', 'group',
+                  'region', 'driver_name', 'driver_phone', 'driver_email', 'driver_address',
+                  'operator', 'is_active', 'created_at', 'updated_at']
 
 class VehicleCostSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleCost
-        fields = '__all__'
+        fields = ['id', 'vehicle', 'cost_type', 'amount', 'description', 'date', 'created_at']
 
 class VehicleIssueSerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleIssue
-        fields = '__all__'
+        fields = ['id', 'vehicle', 'title', 'description', 'is_overdue', 
+                  'is_open', 'priority', 'created_at', 'updated_at']
 
 class VehicleMeterHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = VehicleMeterHistory
-        fields = '__all__'
+        fields = ['id', 'vehicle', 'reading', 'date', 'notes']
 
 class VehicleDetailSerializer(serializers.ModelSerializer):
     costs = VehicleCostSerializer(many=True, read_only=True)
@@ -171,7 +226,11 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Vehicle
-        fields = '__all__'
+        fields = ['id', 'name', 'year', 'make', 'model', 'trim', 'vin', 'license_plate',
+                  'fuel_type', 'meter_reading', 'status', 'vehicle_type', 'group',
+                  'region', 'driver_name', 'driver_phone', 'driver_email', 'driver_address',
+                  'operator', 'is_active', 'costs', 'issues', 'meter_history',
+                  'created_at', 'updated_at']
 
 # =========================================================
 # ORDER SERIALIZERS
@@ -179,12 +238,15 @@ class VehicleDetailSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     station_name = serializers.CharField(source='station.name', read_only=True, allow_null=True)
+    user_name = serializers.CharField(source='user.full_name', read_only=True)
     
     class Meta:
         model = Order
-        fields = ['id', 'order_reference', 'station', 'station_name', 'fuel_type', 
-                  'quantity', 'total_amount', 'delivery_location', 'status', 
-                  'scheduled_delivery', 'created_at']
+        fields = ['id', 'order_reference', 'user', 'user_name', 'station', 'station_name', 
+                  'fuel_type', 'quantity', 'total_amount', 'delivery_location', 
+                  'delivery_latitude', 'delivery_longitude', 'status', 'payment_status',
+                  'payment_method', 'delivery_notes', 'scheduled_delivery', 
+                  'created_at', 'updated_at', 'delivered_at']
 
 # =========================================================
 # NOTIFICATION SERIALIZERS
@@ -193,7 +255,7 @@ class OrderSerializer(serializers.ModelSerializer):
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
-        fields = ['id', 'title', 'message', 'is_read', 'type', 'created_at']
+        fields = ['id', 'user', 'title', 'message', 'is_read', 'type', 'data', 'created_at']
 
 # =========================================================
 # DASHBOARD SERIALIZERS
@@ -216,3 +278,14 @@ class VehicleDashboardDataSerializer(serializers.Serializer):
     total_issues = serializers.IntegerField()
     meter_usage = serializers.ListField(child=serializers.IntegerField())
     vehicle = VehicleSerializer()
+
+# Add to api/serializers.py
+
+class StationDetailSerializer(serializers.ModelSerializer):
+    """Detailed station serializer with additional fields"""
+    class Meta:
+        model = Station
+        fields = ['id', 'name', 'location', 'address', 'latitude', 'longitude', 
+                  'rating', 'reviews_count', 'image', 'is_open', 'is_24_7', 
+                  'price_per_gallon', 'fuel_types', 'phone', 'email', 
+                  'created_at', 'updated_at']

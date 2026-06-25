@@ -1,9 +1,9 @@
 from django.contrib import admin
 from .models import (
     User, LoginHistory, PasswordResetToken, 
-    Station, FuelPrice, 
-    Vehicle, VehicleCost, VehicleIssue, VehicleMeterHistory,
-    Order, Notification
+    Station, FuelType, FuelPrice, 
+    Vehicle, VehicleCost, VehicleIssue, VehicleMeterHistory, VehicleAssignment,
+    Order, Notification, DeliveryAgent, Payment, SecurityLog, DashboardStats
 )
 
 @admin.register(User)
@@ -33,13 +33,13 @@ class PasswordResetTokenAdmin(admin.ModelAdmin):
 
 @admin.register(Station)
 class StationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'location', 'rating', 'is_open', 'is_24_7', 'price_per_gallon']
-    search_fields = ['name', 'location', 'address']
-    list_filter = ['is_open', 'is_24_7']
+    list_display = ['name', 'address', 'phone', 'email', 'rating', 'status', 'is_open']
+    search_fields = ['name', 'address', 'phone', 'email']
+    list_filter = ['status', 'is_open']
     ordering = ['-rating']
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'location', 'address', 'image')
+            'fields': ('name', 'address', 'phone', 'email', 'image')
         }),
         ('Location (GPS)', {
             'fields': ('latitude', 'longitude'),
@@ -49,9 +49,15 @@ class StationAdmin(admin.ModelAdmin):
             'fields': ('rating', 'reviews_count')
         }),
         ('Operations', {
-            'fields': ('is_open', 'is_24_7', 'price_per_gallon', 'fuel_types')
+            'fields': ('status', 'is_open', 'is_24_7', 'price_per_gallon', 'operating_hours')
         }),
     )
+
+@admin.register(FuelType)
+class FuelTypeAdmin(admin.ModelAdmin):
+    list_display = ['station', 'name', 'price_per_liter', 'available']
+    list_filter = ['available', 'name']
+    search_fields = ['station__name']
 
 @admin.register(FuelPrice)
 class FuelPriceAdmin(admin.ModelAdmin):
@@ -59,6 +65,24 @@ class FuelPriceAdmin(admin.ModelAdmin):
     list_filter = ['fuel_type']
     search_fields = ['station__name']
     readonly_fields = ['updated_at']
+
+# =========================================================
+# DELIVERY AGENT MANAGEMENT
+# =========================================================
+
+@admin.register(DeliveryAgent)
+class DeliveryAgentAdmin(admin.ModelAdmin):
+    list_display = ['user', 'phone', 'vehicle_type', 'vehicle_plate', 'status', 'rating', 'total_deliveries']
+    list_filter = ['status', 'vehicle_type']
+    search_fields = ['user__full_name', 'user__phone_number', 'vehicle_plate']
+    readonly_fields = ['total_deliveries', 'created_at', 'updated_at']
+
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ['transaction_id', 'user', 'order', 'amount', 'status', 'payment_method', 'created_at']
+    list_filter = ['status', 'payment_method']
+    search_fields = ['transaction_id', 'user__full_name', 'order__order_reference']
+    readonly_fields = ['created_at', 'updated_at']
 
 # =========================================================
 # VEHICLE MANAGEMENT
@@ -93,14 +117,14 @@ class VehicleAdmin(admin.ModelAdmin):
 
 @admin.register(VehicleCost)
 class VehicleCostAdmin(admin.ModelAdmin):
-    list_display = ['vehicle', 'cost_type', 'amount', 'date']
+    list_display = ['vehicle', 'cost_type', 'amount', 'description', 'date']
     list_filter = ['cost_type']
-    search_fields = ['vehicle__name']
+    search_fields = ['vehicle__name', 'description']
     readonly_fields = ['date', 'created_at']
 
 @admin.register(VehicleIssue)
 class VehicleIssueAdmin(admin.ModelAdmin):
-    list_display = ['vehicle', 'title', 'is_overdue', 'is_open', 'priority']
+    list_display = ['vehicle', 'title', 'is_overdue', 'is_open', 'priority', 'created_at']
     list_filter = ['is_overdue', 'is_open', 'priority']
     search_fields = ['vehicle__name', 'title']
     readonly_fields = ['created_at', 'updated_at']
@@ -112,16 +136,23 @@ class VehicleMeterHistoryAdmin(admin.ModelAdmin):
     search_fields = ['vehicle__name']
     readonly_fields = ['date']
 
+@admin.register(VehicleAssignment)
+class VehicleAssignmentAdmin(admin.ModelAdmin):
+    list_display = ['vehicle', 'assigned_to', 'assigned_date', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['vehicle__name', 'assigned_to']
+    readonly_fields = ['assigned_date']
+
 # =========================================================
 # ORDER MANAGEMENT
 # =========================================================
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ['order_reference', 'user', 'station', 'fuel_type', 'quantity', 'total_amount', 'status', 'created_at']
-    list_filter = ['status', 'created_at']
+    list_display = ['order_reference', 'user', 'station', 'status', 'total_price', 'payment_status', 'created_at']
+    list_filter = ['status', 'payment_status', 'created_at']
     search_fields = ['order_reference', 'user__full_name', 'user__phone_number']
-    readonly_fields = ['order_reference', 'created_at', 'updated_at']
+    readonly_fields = ['order_reference', 'created_at', 'updated_at', 'delivered_at']
     ordering = ['-created_at']
 
 # =========================================================
@@ -135,3 +166,19 @@ class NotificationAdmin(admin.ModelAdmin):
     search_fields = ['user__full_name', 'title']
     readonly_fields = ['created_at']
     ordering = ['-created_at']
+
+# =========================================================
+# SECURITY & DASHBOARD
+# =========================================================
+
+@admin.register(SecurityLog)
+class SecurityLogAdmin(admin.ModelAdmin):
+    list_display = ['event_type', 'user', 'ip_address', 'location', 'created_at']
+    list_filter = ['event_type']
+    search_fields = ['user__full_name', 'ip_address']
+    readonly_fields = ['created_at']
+
+@admin.register(DashboardStats)
+class DashboardStatsAdmin(admin.ModelAdmin):
+    list_display = ['date', 'total_orders', 'total_revenue', 'active_stations', 'active_agents']
+    readonly_fields = ['date']

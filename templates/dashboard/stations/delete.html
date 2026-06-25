@@ -1,0 +1,33 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_title %}Delete Station{% endblock %}
+{% block page_subtitle %}Confirm station deletion{% endblock %}
+
+{% block content %}
+<div style="max-width: 500px; margin: 40px auto;">
+    <div style="background: var(--dark); border-radius: var(--radius); padding: 40px; border: 1px solid rgba(255,255,255,0.04); text-align: center;">
+        <div style="width: 64px; height: 64px; border-radius: 50%; background: rgba(255,68,68,0.1); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+            <i class="fas fa-exclamation-triangle" style="color: #FF4444; font-size: 28px;"></i>
+        </div>
+        
+        <h2 style="color: var(--white); font-size: 20px; font-weight: 700; margin-bottom: 8px;">Delete Station</h2>
+        <p style="color: var(--gray); font-size: 14px; margin-bottom: 24px;">
+            Are you sure you want to delete <strong style="color: var(--white);">"{{ station.name }}"</strong>?<br>
+            This action cannot be undone.
+        </p>
+        
+        <div style="display: flex; gap: 12px; justify-content: center;">
+            <form method="post">
+                {% csrf_token %}
+                <button type="submit" style="padding: 12px 32px; border-radius: 30px; background: #FF4444; color: white; border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition);">
+                    <i class="fas fa-trash"></i> Yes, Delete
+                </button>
+            </form>
+            <a href="{% url 'station_detail' station.pk %}" style="padding: 12px 32px; border-radius: 30px; background: transparent; color: var(--gray); border: 1px solid rgba(255,255,255,0.06); text-decoration: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; transition: var(--transition);">
+                Cancel
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
