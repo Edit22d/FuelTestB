@@ -1,0 +1,162 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_title %}Edit Vehicle{% endblock %}
+{% block page_subtitle %}Update vehicle information{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="background: var(--dark); border-radius: var(--radius); padding: 32px; border: 1px solid rgba(255,255,255,0.04);">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Basic Information -->
+                <div style="grid-column: 1 / -1;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-info-circle" style="color: var(--gold);"></i> Basic Information
+                    </h3>
+                </div>
+                
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Vehicle Name *</label>
+                    <input type="text" name="name" value="{{ vehicle.name }}" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Year *</label>
+                    <input type="number" name="year" value="{{ vehicle.year }}" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Make *</label>
+                    <input type="text" name="make" value="{{ vehicle.make }}" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Model *</label>
+                    <input type="text" name="model" value="{{ vehicle.model }}" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Trim</label>
+                    <input type="text" name="trim" value="{{ vehicle.trim }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <!-- Identification -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-id-card" style="color: var(--gold);"></i> Identification
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">VIN *</label>
+                    <input type="text" name="vin" value="{{ vehicle.vin }}" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">License Plate</label>
+                    <input type="text" name="license_plate" value="{{ vehicle.license_plate }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <!-- Vehicle Details -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-car" style="color: var(--gold);"></i> Vehicle Details
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Fuel Type</label>
+                    <select name="fuel_type" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                        <option value="petrol" {% if vehicle.fuel_type == 'petrol' %}selected{% endif %}>Petrol</option>
+                        <option value="diesel" {% if vehicle.fuel_type == 'diesel' %}selected{% endif %}>Diesel</option>
+                        <option value="electric" {% if vehicle.fuel_type == 'electric' %}selected{% endif %}>Electric</option>
+                        <option value="hybrid" {% if vehicle.fuel_type == 'hybrid' %}selected{% endif %}>Hybrid</option>
+                        <option value="lpg" {% if vehicle.fuel_type == 'lpg' %}selected{% endif %}>LPG</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Meter Reading</label>
+                    <input type="number" name="meter_reading" value="{{ vehicle.meter_reading }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Vehicle Type</label>
+                    <input type="text" name="vehicle_type" value="{{ vehicle.vehicle_type }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Status</label>
+                    <select name="status" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                        <option value="active" {% if vehicle.status == 'active' %}selected{% endif %}>Active</option>
+                        <option value="inactive" {% if vehicle.status == 'inactive' %}selected{% endif %}>Inactive</option>
+                        <option value="maintenance" {% if vehicle.status == 'maintenance' %}selected{% endif %}>Under Maintenance</option>
+                        <option value="out_of_service" {% if vehicle.status == 'out_of_service' %}selected{% endif %}>Out of Service</option>
+                    </select>
+                </div>
+                
+                <!-- Assignment -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-users" style="color: var(--gold);"></i> Assignment
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Group</label>
+                    <input type="text" name="group" value="{{ vehicle.group }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Region</label>
+                    <input type="text" name="region" value="{{ vehicle.region }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Operator</label>
+                    <input type="text" name="operator" value="{{ vehicle.operator }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <!-- Driver Details -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-user" style="color: var(--gold);"></i> Driver Details
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Name</label>
+                    <input type="text" name="driver_name" value="{{ vehicle.driver_name }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Phone</label>
+                    <input type="text" name="driver_phone" value="{{ vehicle.driver_phone }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Email</label>
+                    <input type="email" name="driver_email" value="{{ vehicle.driver_email }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Address</label>
+                    <input type="text" name="driver_address" value="{{ vehicle.driver_address }}" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.04);">
+                <button type="submit" style="padding: 12px 32px; border-radius: 30px; background: var(--gold-gradient); color: var(--black); border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition);">
+                    <i class="fas fa-save"></i> Update Vehicle
+                </button>
+                <a href="{% url 'vehicle_detail' vehicle.pk %}" style="padding: 12px 32px; border-radius: 30px; background: transparent; color: var(--gray); border: 1px solid rgba(255,255,255,0.06); text-decoration: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; transition: var(--transition);">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_title %}Create Notification{% endblock %}
+{% block page_subtitle %}Send a new notification to users{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div style="background: var(--dark); border-radius: var(--radius); padding: 32px; border: 1px solid rgba(255,255,255,0.04);">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div style="grid-column: 1 / -1;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-bell" style="color: var(--gold);"></i> Notification Details
+                    </h3>
+                </div>
+                
+                <!-- Recipient -->
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Recipient</label>
+                    <select name="user" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                        <option value="">All Users (Broadcast)</option>
+                        {% for user in users %}
+                        <option value="{{ user.id }}">{{ user.full_name }} ({{ user.phone_number }})</option>
+                        {% endfor %}
+                    </select>
+                    <p style="color: #888; font-size: 11px; margin-top: 4px;">Leave as "All Users" to send to everyone</p>
+                </div>
+                
+                <!-- Title -->
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Title *</label>
+                    <input type="text" name="title" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="Enter notification title">
+                </div>
+                
+                <!-- Message -->
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Message *</label>
+                    <textarea name="message" required rows="5" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px; resize: vertical;" placeholder="Enter notification message"></textarea>
+                </div>
+                
+                <!-- Type -->
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Notification Type</label>
+                    <select name="type" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                        {% for type_code, type_label in notification_types %}
+                        <option value="{{ type_code }}" {% if type_code == 'system' %}selected{% endif %}>
+                            {{ type_label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Quick Templates -->
+            <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.04);">
+                <p style="color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 12px;">Quick Templates</p>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" onclick="fillTemplate('New Order', 'Your order #ORD123 has been confirmed and is being processed.')" style="padding: 6px 16px; border-radius: 20px; background: rgba(196,150,61,0.1); color: var(--gold); border: 1px solid var(--gold); font-size: 12px; cursor: pointer;">
+                        Order Update
+                    </button>
+                    <button type="button" onclick="fillTemplate('Payment Received', 'Your payment of $50.00 has been received successfully.')" style="padding: 6px 16px; border-radius: 20px; background: rgba(196,150,61,0.1); color: var(--gold); border: 1px solid var(--gold); font-size: 12px; cursor: pointer;">
+                        Payment
+                    </button>
+                    <button type="button" onclick="fillTemplate('Delivery Update', 'Your fuel delivery is on its way and will arrive soon.')" style="padding: 6px 16px; border-radius: 20px; background: rgba(196,150,61,0.1); color: var(--gold); border: 1px solid var(--gold); font-size: 12px; cursor: pointer;">
+                        Delivery
+                    </button>
+                    <button type="button" onclick="fillTemplate('Security Alert', 'We detected unusual activity on your account. Please verify your identity.')" style="padding: 6px 16px; border-radius: 20px; background: rgba(196,150,61,0.1); color: var(--gold); border: 1px solid var(--gold); font-size: 12px; cursor: pointer;">
+                        Security Alert
+                    </button>
+                    <button type="button" onclick="fillTemplate('Special Offer', 'Get 10% off on your next fuel purchase! Use code: FUEL10')" style="padding: 6px 16px; border-radius: 20px; background: rgba(196,150,61,0.1); color: var(--gold); border: 1px solid var(--gold); font-size: 12px; cursor: pointer;">
+                        Promotion
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.04);">
+                <button type="submit" style="padding: 12px 32px; border-radius: 30px; background: var(--gold-gradient); color: var(--black); border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition);">
+                    <i class="fas fa-paper-plane"></i> Send Notification
+                </button>
+                <a href="{% url 'notification_list' %}" style="padding: 12px 32px; border-radius: 30px; background: transparent; color: var(--gray); border: 1px solid rgba(255,255,255,0.06); text-decoration: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; transition: var(--transition);">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function fillTemplate(title, message) {
+    document.querySelector('input[name="title"]').value = title;
+    document.querySelector('textarea[name="message"]').value = message;
+}
+</script>
+{% endblock %}

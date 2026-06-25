@@ -1,0 +1,162 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_title %}Add Vehicle{% endblock %}
+{% block page_subtitle %}Add a new vehicle to the fleet{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="background: var(--dark); border-radius: var(--radius); padding: 32px; border: 1px solid rgba(255,255,255,0.04);">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <!-- Basic Information -->
+                <div style="grid-column: 1 / -1;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-info-circle" style="color: var(--gold);"></i> Basic Information
+                    </h3>
+                </div>
+                
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Vehicle Name *</label>
+                    <input type="text" name="name" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="e.g., 2020 Ford F-150">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Year *</label>
+                    <input type="number" name="year" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Make *</label>
+                    <input type="text" name="make" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="e.g., Ford">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Model *</label>
+                    <input type="text" name="model" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="e.g., F-150">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Trim</label>
+                    <input type="text" name="trim" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="e.g., XL">
+                </div>
+                
+                <!-- Identification -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-id-card" style="color: var(--gold);"></i> Identification
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">VIN *</label>
+                    <input type="text" name="vin" required style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">License Plate</label>
+                    <input type="text" name="license_plate" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <!-- Vehicle Details -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-car" style="color: var(--gold);"></i> Vehicle Details
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Fuel Type</label>
+                    <select name="fuel_type" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                        <option value="petrol">Petrol</option>
+                        <option value="diesel">Diesel</option>
+                        <option value="electric">Electric</option>
+                        <option value="hybrid">Hybrid</option>
+                        <option value="lpg">LPG</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Meter Reading</label>
+                    <input type="number" name="meter_reading" value="0" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Vehicle Type</label>
+                    <input type="text" name="vehicle_type" value="Trailer" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Status</label>
+                    <select name="status" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="maintenance">Under Maintenance</option>
+                        <option value="out_of_service">Out of Service</option>
+                    </select>
+                </div>
+                
+                <!-- Assignment -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-users" style="color: var(--gold);"></i> Assignment
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Group</label>
+                    <input type="text" name="group" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="e.g., Sales">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Region</label>
+                    <input type="text" name="region" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;" placeholder="e.g., USA / Southeast Region">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Operator</label>
+                    <input type="text" name="operator" value="Unassigned" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <!-- Driver Details -->
+                <div style="grid-column: 1 / -1; margin-top: 8px;">
+                    <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                        <i class="fas fa-user" style="color: var(--gold);"></i> Driver Details
+                    </h3>
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Name</label>
+                    <input type="text" name="driver_name" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Phone</label>
+                    <input type="text" name="driver_phone" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div>
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Email</label>
+                    <input type="email" name="driver_email" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+                
+                <div style="grid-column: 1 / -1;">
+                    <label style="display: block; color: var(--gray); font-size: 12px; font-weight: 600; margin-bottom: 6px;">Driver Address</label>
+                    <input type="text" name="driver_address" style="width: 100%; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); background: var(--black); color: var(--white); font-family: 'Inter', sans-serif; font-size: 14px;">
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 12px; margin-top: 32px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.04);">
+                <button type="submit" style="padding: 12px 32px; border-radius: 30px; background: var(--gold-gradient); color: var(--black); border: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; transition: var(--transition);">
+                    <i class="fas fa-plus"></i> Add Vehicle
+                </button>
+                <a href="{% url 'vehicle_list' %}" style="padding: 12px 32px; border-radius: 30px; background: transparent; color: var(--gray); border: 1px solid rgba(255,255,255,0.06); text-decoration: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; transition: var(--transition);">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

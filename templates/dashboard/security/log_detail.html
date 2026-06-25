@@ -1,0 +1,65 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_title %}Security Log Details{% endblock %}
+{% block page_subtitle %}Detailed security event information{% endblock %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div style="background: var(--dark); border-radius: var(--radius); padding: 32px; border: 1px solid rgba(255,255,255,0.04);">
+        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 24px;">
+            <div>
+                <h2 style="color: var(--white); font-size: 20px; font-weight: 800;">{{ log.event_type|title }}</h2>
+                <p style="color: var(--gray); font-size: 13px; margin-top: 4px;">
+                    <i class="fas fa-calendar" style="color: var(--gold);"></i> {{ log.created_at|date:"F d, Y H:i:s" }}
+                </p>
+            </div>
+            <span style="padding: 6px 16px; border-radius: 30px; font-size: 12px; font-weight: 600; 
+                background: {% if log.event_type == 'login' %}rgba(76,175,80,0.12); color: #4CAF50;{% elif log.event_type == 'logout' %}rgba(33,150,243,0.12); color: #2196F3;{% elif log.event_type == 'failed_login' %}rgba(255,68,68,0.12); color: #FF4444;{% elif log.event_type == 'unauthorized_access' %}rgba(255,193,7,0.12); color: #FFC107;{% else %}rgba(156,39,176,0.12); color: #9C27B0;{% endif %}">
+                {{ log.event_type|title }}
+            </span>
+        </div>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div>
+                <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">User</p>
+                <p style="color: var(--white); font-size: 14px;">
+                    {% if log.user %}
+                    {{ log.user.full_name }}
+                    <span style="color: #888; font-size: 12px; display: block;">{{ log.user.phone_number }}</span>
+                    {% else %}
+                    <span style="color: #888;">Anonymous User</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">IP Address</p>
+                <p style="color: var(--white); font-size: 14px; font-family: monospace;">{{ log.ip_address }}</p>
+            </div>
+            <div>
+                <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Location</p>
+                <p style="color: var(--white); font-size: 14px;">{{ log.location|default:"N/A" }}</p>
+            </div>
+            <div>
+                <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">User Agent</p>
+                <p style="color: #888; font-size: 12px; word-break: break-all;">{{ log.user_agent }}</p>
+            </div>
+        </div>
+        
+        {% if log.details %}
+        <div style="margin-bottom: 24px;">
+            <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Additional Details</p>
+            <div style="background: var(--black); border-radius: 12px; padding: 16px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto;">
+                <pre style="color: #888; font-size: 12px; margin: 0; white-space: pre-wrap; word-break: break-all;">{{ log.details|json_script }}</pre>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div style="display: flex; gap: 12px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.04);">
+            <a href="{% url 'security_logs' %}" style="padding: 10px 24px; border-radius: 30px; background: transparent; color: var(--gray); border: 1px solid rgba(255,255,255,0.06); text-decoration: none; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; transition: var(--transition);">
+                <i class="fas fa-arrow-left"></i> Back to Logs
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,123 @@
+{% extends 'dashboard/base.html' %}
+{% load static %}
+
+{% block page_title %}{{ vehicle.name }}{% endblock %}
+{% block page_subtitle %}Vehicle details and information{% endblock %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+    <!-- Main Info -->
+    <div>
+        <div style="background: var(--dark); border-radius: var(--radius); padding: 24px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                <div>
+                    <h2 style="color: var(--white); font-size: 24px; font-weight: 800;">{{ vehicle.name }}</h2>
+                    <p style="color: var(--gray); font-size: 14px; margin-top: 4px;">
+                        <i class="fas fa-tag" style="color: var(--gold);"></i> {{ vehicle.vehicle_type }} - {{ vehicle.vin }}
+                    </p>
+                </div>
+                <span style="padding: 6px 16px; border-radius: 30px; font-size: 12px; font-weight: 600; 
+                    background: {% if vehicle.status == 'active' %}rgba(76,175,80,0.12); color: #4CAF50;
+                    {% elif vehicle.status == 'inactive' %}rgba(255,68,68,0.12); color: #FF4444;
+                    {% elif vehicle.status == 'maintenance' %}rgba(255,193,7,0.12); color: #FFC107;
+                    {% else %}rgba(156,39,176,0.12); color: #9C27B0;{% endif %}">
+                    {{ vehicle.get_status_display }}
+                </span>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">License Plate</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.license_plate|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Meter Reading</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.meter_reading }} mi</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Fuel Type</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.get_fuel_type_display }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Operator</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.operator|default:"Unassigned" }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Year</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.year }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Group</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.group|default:"N/A" }}</p>
+                </div>
+            </div>
+            
+            <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.04);">
+                <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Region</p>
+                <p style="color: var(--white); font-size: 14px;">{{ vehicle.region|default:"N/A" }}</p>
+            </div>
+        </div>
+        
+        <!-- Driver Details -->
+        <div style="background: var(--dark); border-radius: var(--radius); padding: 24px; border: 1px solid rgba(255,255,255,0.04);">
+            <h3 style="color: var(--white); font-size: 16px; font-weight: 700; margin-bottom: 16px;">
+                <i class="fas fa-user" style="color: var(--gold);"></i> Driver Details
+            </h3>
+            {% if vehicle.driver_name %}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Name</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.driver_name }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Phone</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.driver_phone|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Email</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.driver_email|default:"N/A" }}</p>
+                </div>
+                <div>
+                    <p style="color: var(--gray); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Address</p>
+                    <p style="color: var(--white); font-size: 14px;">{{ vehicle.driver_address|default:"N/A" }}</p>
+                </div>
+            </div>
+            {% else %}
+            <p style="color: var(--gray); font-size: 13px;">No driver assigned</p>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div>
+        <div style="background: var(--dark); border-radius: var(--radius); padding: 24px; border: 1px solid rgba(255,255,255,0.04); margin-bottom: 20px;">
+            <h4 style="color: var(--white); font-size: 14px; font-weight: 700; margin-bottom: 16px;">Quick Actions</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+                <a href="{% url 'vehicle_edit' vehicle.pk %}" style="padding: 10px 16px; border-radius: 12px; background: rgba(196,150,61,0.08); color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 500; transition: var(--transition);">
+                    <i class="fas fa-edit"></i> Edit Vehicle
+                </a>
+                <a href="{% url 'vehicle_list' %}" style="padding: 10px 16px; border-radius: 12px; background: rgba(196,150,61,0.08); color: var(--gold); text-decoration: none; font-size: 13px; font-weight: 500; transition: var(--transition);">
+                    <i class="fas fa-arrow-left"></i> Back to Vehicles
+                </a>
+                <a href="{% url 'vehicle_delete' vehicle.pk %}" style="padding: 10px 16px; border-radius: 12px; background: rgba(255,68,68,0.08); color: #FF4444; text-decoration: none; font-size: 13px; font-weight: 500; transition: var(--transition);">
+                    <i class="fas fa-trash"></i> Delete Vehicle
+                </a>
+            </div>
+        </div>
+        
+        <div style="background: var(--dark); border-radius: var(--radius); padding: 24px; border: 1px solid rgba(255,255,255,0.04);">
+            <h4 style="color: var(--white); font-size: 14px; font-weight: 700; margin-bottom: 12px;">Vehicle Info</h4>
+            <div style="display: flex; flex-direction: column; gap: 8px; color: var(--gray); font-size: 13px;">
+                <p><span style="color: var(--white);">VIN:</span> {{ vehicle.vin }}</p>
+                <p><span style="color: var(--white);">Make:</span> {{ vehicle.make }}</p>
+                <p><span style="color: var(--white);">Model:</span> {{ vehicle.model }}</p>
+                {% if vehicle.trim %}
+                <p><span style="color: var(--white);">Trim:</span> {{ vehicle.trim }}</p>
+                {% endif %}
+                <p><span style="color: var(--white);">Created:</span> {{ vehicle.created_at|date:"M d, Y" }}</p>
+                <p><span style="color: var(--white);">Last Updated:</span> {{ vehicle.updated_at|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
