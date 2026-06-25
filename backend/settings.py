@@ -176,6 +176,10 @@ CORS_ALLOWED_ORIGINS = [
     "http://10.0.3.2:8000",  # Android emulator (alternative)
     "http://192.168.1.100:8000",  # Replace with your local IP for physical device
     "http://192.168.1.101:8000",  # Add more IPs as needed
+
+    'http://localhost:8000',
+    'https://localhost:8000',
+    'https://*.app.github.dev',  # covers all Codespaces forwarded ports
 ]
 
 # Additional CORS settings
@@ -258,9 +262,12 @@ DASHBOARD_THEME = {
 # =========================================================
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:8000",
     "http://127.0.0.1:8000",
     "http://10.0.2.2:8000",
+
+    'http://localhost:8000',
+    'https://localhost:8000',
+    'https://*.app.github.dev',  # covers all Codespaces forwarded ports
 ]
 
 CSRF_COOKIE_HTTPONLY = False

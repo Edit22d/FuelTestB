@@ -1,0 +1,121 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+eggs/
+parts/
+var/
+sdist/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+.installed.cfg
+lib/
+lib64/
+MANIFEST
+
+# ── Virtual Environments ───────────────────────────────────────────────────────
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ── Django ────────────────────────────────────────────────────────────────────
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+/media/
+
+# ── Django migrations (optional — remove if you want to track migrations) ─────
+# */migrations/*.py
+# !*/migrations/__init__.py
+
+# ── Environment Variables ──────────────────────────────────────────────────────
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+*.env
+
+# ── Production / Deployment ───────────────────────────────────────────────────
+passenger_wsgi.py
+.cpanel/
+.htpasswd
+.htaccess
+Procfile.local
+gunicorn.conf.py
+*.pid
+*.sock
+
+# ── Secrets & Keys ────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.py
+secrets.json
+service_account.json
+google-credentials.json
+
+# ── Database dumps ────────────────────────────────────────────────────────────
+*.sql
+*.dump
+*.bak
+
+# ── Pytest / Testing ──────────────────────────────────────────────────────────
+.pytest_cache/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+htmlcov/
+nosetests.xml
+
+# ── Type checkers ─────────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+.pyre/
+
+# ── Jupyter ───────────────────────────────────────────────────────────────────
+.ipynb_checkpoints
+*.ipynb
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+*~
+
+# ── Editors ───────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*.sublime-project
+*.sublime-workspace
+
+# ── Node (if using frontend build tools) ──────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-error.log
+.pnp/
+.pnp.js
+
+# ── Compiled frontend assets ──────────────────────────────────────────────────
+/frontend/build/
+/frontend/dist/
